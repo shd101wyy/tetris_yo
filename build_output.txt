@@ -1,0 +1,20 @@
+Using Cachix caches: devenv
+Building shell in 90.8ms
+Running tasks     devenv:enterShell
+
+Running           devenv:files:cleanup
+Succeeded         devenv:files:cleanup (13.16ms)
+Running           devenv:enterShell
+Succeeded         devenv:enterShell (13.44ms)
+Running           devenv:enterTest
+No command        devenv:enterTest
+1 Skipped, 2 Succeeded
+✨ devenv 1.11.1 is out of date. Please update to 2.0.3: https://devenv.sh/getting-started/#installation
+Resolving 1 system library(ies)...
+  raylib: found via pkg-config (raylib)
+Building tetris_yo v0.0.1-3-g7505a0e → yo-out/bin/tetris_yo
+Generated C code written to /home/yiyiwang/Workspace/tetris_yo/yo-out/bin/tetris_yo.c
+Bundled mimalloc not found, falling back to standard malloc
+Using system liburing for async I/O
+Compiling with: clang -std=c11 -w -O3 /home/yiyiwang/Workspace/tetris_yo/yo-out/bin/tetris_yo.c -I/nix/store/06rnravqpz3jn9xw1kvc98ad9xipi0qx-raylib-5.5-unstable-2026-01-20/include -L/nix/store/06rnravqpz3jn9xw1kvc98ad9xipi0qx-raylib-5.5-unstable-2026-01-20/lib -lraylib -luring -o /home/yiyiwang/Workspace/tetris_yo/yo-out/bin/tetris_yo
+Successfully compiled to /home/yiyiwang/Workspace/tetris_yo/yo-out/bin/tetris_yo

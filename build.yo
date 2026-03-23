@@ -1,10 +1,10 @@
 build :: import "std/build";
 
-// Git dependency: resolves `import "raylib_yo"` from GitHub
-raylib_yo :: build.dependency({ name: "raylib_yo", url: "https://github.com/shd101wyy/raylib_yo.git", ref: "v0.0.1" });
+// Local path dependency for development
+raylib_yo :: build.path_dependency({ name: "raylib_yo", path: "../raylib_yo" });
 
 // System library: provides C linker flags for raylib via pkg-config
-raylib :: build.system_library({ name: "raylib", pkg_config: "raylib" });
+raylib :: build.system_library({ name: "raylib" });
 
 build.project({ name: "tetris_yo", root: "./src/lib.yo" });
 
