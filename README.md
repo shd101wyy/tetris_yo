@@ -9,7 +9,7 @@ This project demonstrates:
 
 ## Screenshot
 
-<!-- TODO: Add screenshot -->
+<img width="800" height="500" alt="Image" src="https://github.com/user-attachments/assets/969ae508-0688-40d7-85e0-ccef5b8fad52" />
 
 ## How to Play
 
