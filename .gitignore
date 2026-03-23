@@ -13,3 +13,4 @@ Thumbs.db
 .devenv*
 .direnv*
 .yo-cache/
+build_output.txt
