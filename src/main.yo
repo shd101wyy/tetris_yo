@@ -2,13 +2,14 @@
 // Based on raylib classic tetris by Ramon Santamaria
 { InitWindow, CloseWindow, WindowShouldClose, SetTargetFPS,
   BeginDrawing, EndDrawing, ClearBackground,
-  DrawRectangle, DrawLine, DrawText,
-  MeasureText, TextFormat,
+  DrawRectangle, DrawRectangleLines, DrawLine, DrawText,
+  MeasureText, TextFormat, Fade,
   IsKeyPressed, IsKeyDown,
   GetRandomValue,
-  Color,
+  Color, Rectangle,
   KEY_ENTER, KEY_RIGHT, KEY_LEFT, KEY_DOWN, KEY_UP, KEY_P,
-  LIGHTGRAY, GRAY, DARKGRAY, MAROON, RAYWHITE } :: import "raylib_yo";
+  LIGHTGRAY, GRAY, DARKGRAY, MAROON, RAYWHITE,
+  SKYBLUE, BLUE, ORANGE, YELLOW, GREEN, RED, PURPLE } :: import "raylib_yo";
 
 // Grid square states
 EMPTY  :: i32(0);
@@ -17,16 +18,45 @@ FULL   :: i32(2);
 BLOCK  :: i32(3);
 FADING :: i32(4);
 
+// Piece types (0-6) corresponding to standard Tetris tetrominoes
+PIECE_O :: i32(0); // O-piece (square)
+PIECE_L :: i32(1); // L-piece
+PIECE_J :: i32(2); // J-piece (mirror L)
+PIECE_I :: i32(3); // I-piece (line)
+PIECE_T :: i32(4); // T-piece
+PIECE_S :: i32(5); // S-piece
+PIECE_Z :: i32(6); // Z-piece
+PIECE_NONE :: i32(7); // no piece (border/empty)
+
+// Color for each piece type
+piece_color :: (fn(pt: i32) -> Color)(
+  cond(
+    (pt == PIECE_O) => YELLOW,
+    (pt == PIECE_L) => ORANGE,
+    (pt == PIECE_J) => BLUE,
+    (pt == PIECE_I) => SKYBLUE,
+    (pt == PIECE_T) => PURPLE,
+    (pt == PIECE_S) => GREEN,
+    (pt == PIECE_Z) => RED,
+    true => GRAY
+  )
+);
+
+// Darker variant for block borders
+piece_color_dark :: (fn(pt: i32) -> Color)(
+  Fade(piece_color(pt), f32(0.6))
+);
+
 // Game parameters
-SQUARE_SIZE      :: i32(20);
+SQUARE_SIZE      :: i32(33);
 GRID_H           :: i32(12);
 GRID_V           :: i32(20);
 LATERAL_SPEED    :: i32(10);
 TURNING_SPEED    :: i32(12);
 FAST_FALL_AWAIT  :: i32(30);
 FADING_TIME      :: i32(33);
-SCREEN_W         :: i32(800);
-SCREEN_H         :: i32(450);
+SCREEN_W         :: i32(1000);
+SCREEN_H         :: i32(750);
 
 // 2D → flat index helpers (column-major: grid[col][row])
 grid_idx :: (fn(col: i32, row: i32) -> usize)(
@@ -47,6 +77,11 @@ main :: (fn() -> unit)({
   (grid     : Array(i32, 240)) = Array(i32, 240).fill(EMPTY);
   (piece    : Array(i32,  16)) = Array(i32,  16).fill(EMPTY);
   (incoming : Array(i32,  16)) = Array(i32,  16).fill(EMPTY);
+
+  // Color tracking: which piece type occupies each cell
+  (colorGrid : Array(i32, 240)) = Array(i32, 240).fill(PIECE_NONE);
+  (currentPieceType  : i32) = PIECE_NONE;
+  (incomingPieceType : i32) = PIECE_NONE;
 
   (pieceX : i32) = i32(0);
   (pieceY : i32) = i32(0);
@@ -108,11 +143,14 @@ main :: (fn() -> unit)({
             gravitySpeed = i32(30);
             pieceX = i32(0);
             pieceY = i32(0);
+            currentPieceType = PIECE_NONE;
+            incomingPieceType = PIECE_NONE;
             // Reset grid
             ci = i32(0);
             while (ci < GRID_H), ci = (ci + i32(1)), {
               cj = i32(0);
               while (cj < GRID_V), cj = (cj + i32(1)), {
+                colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
                 cond(
                   (((cj == (GRID_V - i32(1))) || (ci == i32(0))) || (ci == (GRID_H - i32(1)))) =>
                     { grid(grid_idx(ci, cj)) = BLOCK; },
@@ -154,6 +192,7 @@ main :: (fn() -> unit)({
                         ci = i32(1);
                         while (ci < (GRID_H - i32(1))), ci = (ci + i32(1)), {
                           grid(grid_idx(ci, cj)) = EMPTY;
+                          colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
                         };
                         (j2 : i32) = (cj - i32(1));
                         while (j2 >= i32(0)), j2 = (j2 - i32(1)), {
@@ -163,10 +202,14 @@ main :: (fn() -> unit)({
                               (grid(grid_idx(i2, j2)) == FULL) => {
                                 grid(grid_idx(i2, (j2 + i32(1)))) = FULL;
                                 grid(grid_idx(i2, j2)) = EMPTY;
+                                colorGrid(grid_idx(i2, (j2 + i32(1)))) = colorGrid(grid_idx(i2, j2));
+                                colorGrid(grid_idx(i2, j2)) = PIECE_NONE;
                               },
                               (grid(grid_idx(i2, j2)) == FADING) => {
                                 grid(grid_idx(i2, (j2 + i32(1)))) = FADING;
                                 grid(grid_idx(i2, j2)) = EMPTY;
+                                colorGrid(grid_idx(i2, (j2 + i32(1)))) = colorGrid(grid_idx(i2, j2));
+                                colorGrid(grid_idx(i2, j2)) = PIECE_NONE;
                               },
                               true => ()
                             );
@@ -194,6 +237,7 @@ main :: (fn() -> unit)({
                       beginPlay => {
                         // Generate first incoming piece
                         (r : i32) = GetRandomValue(i32(0), i32(6));
+                        incomingPieceType = r;
                         ci = i32(0);
                         while (ci < i32(16)), ci = (ci + i32(1)), { incoming(usize(ci)) = EMPTY; };
                         cond(
@@ -210,7 +254,8 @@ main :: (fn() -> unit)({
                       true => ()
                     );
 
-                    // Copy incoming → piece
+                    // Copy incoming → piece, transfer piece type
+                    currentPieceType = incomingPieceType;
                     ci = i32(0);
                     while (ci < i32(16)), ci = (ci + i32(1)), {
                       piece(usize(ci)) = incoming(usize(ci));
@@ -218,6 +263,7 @@ main :: (fn() -> unit)({
 
                     // Generate next incoming piece
                     (r2 : i32) = GetRandomValue(i32(0), i32(6));
+                    incomingPieceType = r2;
                     ci = i32(0);
                     while (ci < i32(16)), ci = (ci + i32(1)), { incoming(usize(ci)) = EMPTY; };
                     cond(
@@ -230,7 +276,7 @@ main :: (fn() -> unit)({
                       true =>           { incoming(piece_idx(i32(1),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; incoming(piece_idx(i32(3),i32(1)))=MOVING; }
                     );
 
-                    // Place piece on grid
+                    // Place piece on grid + set color
                     ci = pieceX;
                     while (ci < (pieceX + i32(4))), ci = (ci + i32(1)), {
                       cj = i32(0);
@@ -238,6 +284,7 @@ main :: (fn() -> unit)({
                         cond(
                           (piece(piece_idx((ci - pieceX), cj)) == MOVING) => {
                             grid(grid_idx(ci, cj)) = MOVING;
+                            colorGrid(grid_idx(ci, cj)) = currentPieceType;
                           },
                           true => ()
                         );
@@ -298,6 +345,8 @@ main :: (fn() -> unit)({
                                   (grid(grid_idx(ci, cj)) == MOVING) => {
                                     grid(grid_idx(ci, (cj + i32(1)))) = MOVING;
                                     grid(grid_idx(ci, cj)) = EMPTY;
+                                    colorGrid(grid_idx(ci, (cj + i32(1)))) = colorGrid(grid_idx(ci, cj));
+                                    colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
                                   },
                                   true => ()
                                 );
@@ -360,6 +409,8 @@ main :: (fn() -> unit)({
                                       (grid(grid_idx(ci, cj)) == MOVING) => {
                                         grid(grid_idx((ci - i32(1)), cj)) = MOVING;
                                         grid(grid_idx(ci, cj)) = EMPTY;
+                                        colorGrid(grid_idx((ci - i32(1)), cj)) = colorGrid(grid_idx(ci, cj));
+                                        colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
                                       },
                                       true => ()
                                     );
@@ -393,6 +444,8 @@ main :: (fn() -> unit)({
                                       (grid(grid_idx(ci, cj)) == MOVING) => {
                                         grid(grid_idx((ci + i32(1)), cj)) = MOVING;
                                         grid(grid_idx(ci, cj)) = EMPTY;
+                                        colorGrid(grid_idx((ci + i32(1)), cj)) = colorGrid(grid_idx(ci, cj));
+                                        colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
                                       },
                                       true => ()
                                     );
@@ -405,7 +458,7 @@ main :: (fn() -> unit)({
                           },
                           true => ()
                         );
-                        cond(collision => { lateralCounter = i32(0); }, true => ());
+                        lateralCounter = i32(0);
                       },
                       true => ()
                     );
@@ -474,7 +527,10 @@ main :: (fn() -> unit)({
                         while (cj >= i32(0)), cj = (cj - i32(1)), {
                           ci = i32(1);
                           while (ci < (GRID_H - i32(1))), ci = (ci + i32(1)), {
-                            cond((grid(grid_idx(ci, cj)) == MOVING) => { grid(grid_idx(ci, cj)) = EMPTY; }, true => ());
+                            cond((grid(grid_idx(ci, cj)) == MOVING) => {
+                              grid(grid_idx(ci, cj)) = EMPTY;
+                              colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
+                            }, true => ());
                           };
                         };
                         ci = pieceX;
@@ -484,6 +540,7 @@ main :: (fn() -> unit)({
                             cond(
                               (piece(piece_idx((ci - pieceX), (cj - pieceY))) == MOVING) => {
                                 grid(grid_idx(ci, cj)) = MOVING;
+                                colorGrid(grid_idx(ci, cj)) = currentPieceType;
                               },
                               true => ()
                             );
@@ -528,6 +585,7 @@ main :: (fn() -> unit)({
           ci = i32(0);
           while (ci < GRID_H), ci = (ci + i32(1)), {
             (cell : i32) = grid(grid_idx(ci, cj));
+            (pt : i32) = colorGrid(grid_idx(ci, cj));
             cond(
               (cell == EMPTY) => {
                 DrawLine(offsetX, offsetY, (offsetX + SQUARE_SIZE), offsetY, LIGHTGRAY);
@@ -536,10 +594,12 @@ main :: (fn() -> unit)({
                 DrawLine(offsetX, (offsetY + SQUARE_SIZE), (offsetX + SQUARE_SIZE), (offsetY + SQUARE_SIZE), LIGHTGRAY);
               },
               (cell == FULL) => {
-                DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, GRAY);
+                DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color(pt));
+                DrawRectangleLines(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color_dark(pt));
               },
               (cell == MOVING) => {
-                DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, DARKGRAY);
+                DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color(pt));
+                DrawRectangleLines(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color_dark(pt));
               },
               (cell == BLOCK) => {
                 DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, LIGHTGRAY);
@@ -556,8 +616,8 @@ main :: (fn() -> unit)({
         };
 
         // Draw incoming piece preview
-        offsetX = i32(500);
-        offsetY = i32(45);
+        offsetX = i32(700);
+        offsetY = i32(80);
         (previewX : i32) = offsetX;
 
         cj = i32(0);
@@ -572,7 +632,8 @@ main :: (fn() -> unit)({
                 DrawLine(offsetX, (offsetY + SQUARE_SIZE), (offsetX + SQUARE_SIZE), (offsetY + SQUARE_SIZE), LIGHTGRAY);
               },
               (incoming(piece_idx(ci, cj)) == MOVING) => {
-                DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, GRAY);
+                DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color(incomingPieceType));
+                DrawRectangleLines(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color_dark(incomingPieceType));
               },
               true => ()
             );
@@ -582,8 +643,8 @@ main :: (fn() -> unit)({
           offsetY = (offsetY + SQUARE_SIZE);
         };
 
-        DrawText("INCOMING:", i32(500), i32(25), i32(10), GRAY);
-        DrawText(TextFormat("LINES:      %04i", lines), i32(500), i32(145), i32(10), GRAY);
+        DrawText("INCOMING:", i32(700), i32(55), i32(15), GRAY);
+        DrawText(TextFormat("LINES:      %04i", lines), i32(700), i32(230), i32(15), GRAY);
 
         cond(
           pause => {
