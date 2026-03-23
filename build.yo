@@ -1,21 +1,18 @@
 build :: import "std/build";
 
+// Git dependency: resolves `import "raylib_yo"` from GitHub
+raylib_yo :: build.dependency({ name: "raylib_yo", url: "https://github.com/shd101wyy/raylib_yo.git", ref: "v0.0.1" });
+
+// System library: provides C linker flags for raylib via pkg-config
+raylib :: build.system_library({ name: "raylib", pkg_config: "raylib" });
+
 build.project({ name: "tetris_yo", root: "./src/lib.yo" });
 
-exe :: build.executable({ name: "tetris_yo", root: "./src/main.yo" });
-
-lib :: build.static_library({ name: "tetris_yo-lib", root: "./src/lib.yo" });
-
-tests :: build.test({ name: "tests", root: "./tests/" });
-
-run_exe :: build.run(exe);
+exe :: build.executable({ name: "tetris_yo", root: "./src/main.yo", optimize: build.Optimize.ReleaseFast });
+exe.link(raylib);
 
 install :: build.step("install", "Build all artifacts");
 install.depend_on(exe);
-install.depend_on(lib);
 
 run_step :: build.step("run", "Run the application");
-run_step.depend_on(run_exe);
-
-test_step :: build.step("test", "Run unit tests");
-test_step.depend_on(tests);
+run_step.depend_on(build.run(exe));
