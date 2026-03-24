@@ -1,10 +1,13 @@
 build :: import "std/build";
 
 // Git dependency: resolves `import "raylib_yo"` from GitHub
-raylib_yo :: build.dependency({ name: "raylib_yo", url: "https://github.com/shd101wyy/raylib_yo.git", ref: "v0.0.2" });
+raylib_yo :: build.dependency({ name: "raylib_yo", url: "https://github.com/shd101wyy/raylib_yo.git", ref: "v0.0.3" });
 
 // System library: provides C linker flags for raylib via pkg-config
-raylib :: build.system_library({ name: "raylib" });
+raylib :: build.system_library({
+  name: "raylib",
+  defines: "NOMINMAX NOGDI NOUSER"
+});
 
 build.project({ name: "tetris_yo", root: "./src/lib.yo" });
 
