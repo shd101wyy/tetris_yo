@@ -1,7 +1,7 @@
 build :: import "std/build";
 
-// Local path dependency: resolves `import "raylib_yo"` from local path
-raylib_yo :: build.path_dependency({ name: "raylib_yo", path: "../raylib_yo" });
+// Git dependency: resolves `import "raylib_yo"` from GitHub
+raylib_yo :: build.dependency({ name: "raylib_yo", url: "https://github.com/shd101wyy/raylib_yo.git", ref: "v0.0.4" });
 
 exe :: build.executable({ name: "tetris_yo", root: "./src/main.yo", optimize: build.Optimize.ReleaseFast });
 
