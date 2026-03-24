@@ -1,18 +1,12 @@
 build :: import "std/build";
 
-// Git dependency: resolves `import "raylib_yo"` from GitHub
-raylib_yo :: build.dependency({ name: "raylib_yo", url: "https://github.com/shd101wyy/raylib_yo.git", ref: "v0.0.3" });
-
-// System library: provides C linker flags for raylib via pkg-config
-raylib :: build.system_library({
-  name: "raylib",
-  defines: "NOMINMAX NOGDI NOUSER"
-});
-
-build.project({ name: "tetris_yo", root: "./src/lib.yo" });
+// Local path dependency: resolves `import "raylib_yo"` from local path
+raylib_yo :: build.path_dependency({ name: "raylib_yo", path: "../raylib_yo" });
 
 exe :: build.executable({ name: "tetris_yo", root: "./src/main.yo", optimize: build.Optimize.ReleaseFast });
-exe.link(raylib);
+
+// Import the raylib_yo module — system libraries (raylib) are transitively propagated
+exe.add_import({ name: "raylib_yo", module: raylib_yo.module("") });
 
 install :: build.step("install", "Build all artifacts");
 install.depend_on(exe);
