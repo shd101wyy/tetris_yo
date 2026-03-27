@@ -39,9 +39,9 @@ direnv allow .  # One-time setup
 ### Build & Run (Native)
 
 ```bash
-yo fetch         # Fetch raylib_yo dependency from GitHub
-yo build         # Build the executable (native + WASM)
-yo build run     # Build and run the game
+yo fetch                # Fetch raylib_yo dependency from GitHub
+yo build install_native # Build only the native executable
+yo build run            # Build and run the game
 ```
 
 The compiled binary will be at `yo-out/<target>/bin/tetris_yo` (e.g., `yo-out/x86_64-windows-msvc/bin/tetris_yo.exe`).
@@ -88,7 +88,9 @@ rm -rf raylib-wasm-build
 #### 3. Build and serve
 
 ```bash
-yo build                        # Builds both native and WASM targets
+yo build install_wasm           # Build only the WASM target
+# or
+yo build                        # Build both native and WASM targets
 ```
 
 The WASM output will be at `yo-out/wasm32-emscripten/bin/`. Serve it with a local HTTP server:
@@ -98,6 +100,15 @@ cd yo-out/wasm32-emscripten/bin
 python -m http.server 8080
 # Open http://localhost:8080/tetris_yo_wasm.html
 ```
+
+### Build Steps
+
+| Command | Description |
+|---------|-------------|
+| `yo build` | Build all targets (native + WASM) |
+| `yo build install_native` | Build only the native executable |
+| `yo build install_wasm` | Build only the WASM target |
+| `yo build run` | Build and run the native game |
 
 ## Project Structure
 
