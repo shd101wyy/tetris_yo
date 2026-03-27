@@ -28,9 +28,15 @@ exe_wasm.add_import_list(import_list);
 // Emscripten-specific flags: GLFW support and ASYNCIFY for the game loop
 exe_wasm.add_c_flags("-sUSE_GLFW=3 -sASYNCIFY -DPLATFORM_WEB");
 
-install :: build.step("install", "Build all artifacts");
-install.depend_on(exe);
-install.depend_on(exe_wasm);
+install_native :: build.step("install_native", "Build native executable");
+install_native.depend_on(exe);
+
+install_wasm :: build.step("install_wasm", "Build WASM executable");
+install_wasm.depend_on(exe_wasm);
+
+install :: build.step("install", "Build all targets");
+install.depend_on(install_native);
+install.depend_on(install_wasm);
 
 run_step :: build.step("run", "Run the application");
 run_step.depend_on(build.run(exe));
