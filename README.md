@@ -36,25 +36,81 @@ If you use [devenv](https://devenv.sh/), all prerequisites are handled automatic
 direnv allow .  # One-time setup
 ```
 
-### Build & Run
+### Build & Run (Native)
 
 ```bash
 yo fetch         # Fetch raylib_yo dependency from GitHub
-yo build         # Build the executable
+yo build         # Build the executable (native + WASM)
 yo build run     # Build and run the game
 ```
 
-The compiled binary will be at `yo-out/bin/tetris_yo`.
+The compiled binary will be at `yo-out/<target>/bin/tetris_yo` (e.g., `yo-out/x86_64-windows-msvc/bin/tetris_yo.exe`).
+
+### Build for WASM (Browser)
+
+The project also builds a WebAssembly version via Emscripten. This requires additional setup:
+
+#### 1. Install Emscripten
+
+Follow the [Emscripten getting started guide](https://emscripten.org/docs/getting_started/downloads.html), or use a package manager:
+
+```bash
+# scoop (Windows)
+scoop install emscripten
+
+# brew (macOS)
+brew install emscripten
+```
+
+#### 2. Build raylib for Emscripten
+
+```bash
+git clone --depth 1 --branch 5.5 https://github.com/raysan5/raylib.git raylib-wasm-build
+cd raylib-wasm-build
+
+# Configure with Emscripten
+emcmake cmake -B build -G Ninja -DPLATFORM=Web -DCMAKE_BUILD_TYPE=Release
+
+# Build and install to Emscripten sysroot
+emmake ninja -C build
+emmake ninja -C build install
+
+cd ..
+rm -rf raylib-wasm-build
+```
+
+> **Note (Windows):** emcc may install `libraylib.a` to `sysroot/lib/` but search in `sysroot/lib/wasm32-emscripten/`. If you get a linker error, copy the file:
+> ```powershell
+> $sysroot = (emcc --cflags | Select-String 'sysroot=(.+?)[\s"]' | % { $_.Matches[0].Groups[1].Value })
+> Copy-Item "$sysroot\lib\libraylib.a" "$sysroot\lib\wasm32-emscripten\libraylib.a"
+> ```
+
+#### 3. Build and serve
+
+```bash
+yo build                        # Builds both native and WASM targets
+```
+
+The WASM output will be at `yo-out/wasm32-emscripten/bin/`. Serve it with a local HTTP server:
+
+```bash
+cd yo-out/wasm32-emscripten/bin
+python -m http.server 8080
+# Open http://localhost:8080/tetris_yo_wasm.html
+```
 
 ## Project Structure
 
 ```
 tetris_yo/
-├── build.yo          # Build configuration (dependencies, system libraries)
+├── build.yo          # Build configuration (native + WASM targets, dependencies)
 ├── yo.lock           # Dependency lock file
 ├── src/
 │   ├── lib.yo        # Library root (empty)
 │   └── main.yo       # Game implementation (~600 lines)
+├── yo-out/
+│   ├── x86_64-windows-msvc/bin/   # Native build output
+│   └── wasm32-emscripten/bin/     # WASM build output (.html + .js + .wasm)
 └── devenv.nix        # Development environment
 ```
 

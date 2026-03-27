@@ -3,13 +3,34 @@ build :: import "std/build";
 // Git dependency: resolves `import "raylib_yo"` from GitHub
 raylib_yo :: build.dependency({ name: "raylib_yo", url: "https://github.com/shd101wyy/raylib_yo.git", ref: "v0.0.4" });
 
-exe :: build.executable({ name: "tetris_yo", root: "./src/main.yo", optimize: build.Optimize.ReleaseFast });
+exe :: build.executable({
+  name: "tetris_yo",
+  root: "./src/main.yo",
+  optimize: build.Optimize.ReleaseFast
+});
+exe_wasm :: build.executable({
+  name: "tetris_yo_wasm",
+  root: "./src/main.yo",
+  optimize: build.Optimize.ReleaseFast,
+  target: build.CompilationTarget.Wasm32_Emscripten
+});
 
 // Import the raylib_yo module — system libraries (raylib) are transitively propagated
-exe.add_import({ name: "raylib_yo", module: raylib_yo.module("") });
+
+import_list :: ComptimeList(build.ImportEntry)({ 
+  name: "raylib_yo",
+  module: raylib_yo.module("") 
+});
+
+exe.add_import_list(import_list);
+exe_wasm.add_import_list(import_list);
+
+// Emscripten-specific flags: GLFW support and ASYNCIFY for the game loop
+exe_wasm.add_c_flags("-sUSE_GLFW=3 -sASYNCIFY -DPLATFORM_WEB");
 
 install :: build.step("install", "Build all artifacts");
 install.depend_on(exe);
+install.depend_on(exe_wasm);
 
 run_step :: build.step("run", "Run the application");
 run_step.depend_on(build.run(exe));
