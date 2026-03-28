@@ -1,0 +1,22 @@
+// Dependencies for this project.
+// Managed by `yo install`. Manual edits are preserved.
+//
+// Usage in build.yo:
+//   { imports } :: import "./deps.yo";
+//   exe.add_import_list(imports);
+//
+// Add a dependency:
+//   yo install user/repo
+//   yo install user/repo@v1.0.0
+//   yo install ./local-path
+
+build :: import "std/build";
+
+// --- Dependencies ---
+raylib_yo :: build.dependency({ name: "raylib_yo", url: "https://github.com/shd101wyy/raylib_yo.git", ref: "v0.0.4" });
+
+// --- Import list ---
+imports :: ComptimeList(build.ImportEntry)(
+  { name: "raylib_yo", module: raylib_yo.module() }
+);
+export imports;
