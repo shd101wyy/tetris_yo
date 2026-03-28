@@ -46,6 +46,9 @@ jobs:
           emmake ninja -C build install
           cd ..
           rm -rf raylib-wasm-build
+          # emcc installs to sysroot/lib/ but searches sysroot/lib/wasm32-emscripten/
+          SYSROOT=$(em-config CACHE)/sysroot
+          cp "$SYSROOT/lib/libraylib.a" "$SYSROOT/lib/wasm32-emscripten/libraylib.a" 2>/dev/null || true
 
       - name: Fetch dependencies
         run: yo fetch
