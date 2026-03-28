@@ -43,7 +43,7 @@ jobs:
           cd raylib-wasm-build
           emcmake cmake -B build -G Ninja -DPLATFORM=Web -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=OFF
           emmake ninja -C build
-          sudo emmake ninja -C build install
+          emmake ninja -C build install
           cd ..
           rm -rf raylib-wasm-build
 
