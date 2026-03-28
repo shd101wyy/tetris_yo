@@ -56,6 +56,9 @@ jobs:
       - name: Build WASM target
         run: yo build install_wasm
 
+      - name: Prepare Pages artifact
+        run: cp yo-out/wasm32-emscripten/bin/tetris_yo_wasm.html yo-out/wasm32-emscripten/bin/index.html
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

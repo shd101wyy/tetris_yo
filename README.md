@@ -4,7 +4,7 @@
 
 A classic Tetris game written in [Yo](https://github.com/shd101wyy/Yo) using [raylib_yo](https://github.com/shd101wyy/raylib_yo) bindings.
 
-**[▶ Play in Browser](https://shd101wyy.github.io/tetris_yo/tetris_yo_wasm.html)**
+**[▶ Play in Browser](https://shd101wyy.github.io/tetris_yo/)**
 
 This project demonstrates:
 - Using Yo's **build system** with git dependencies
