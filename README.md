@@ -1,6 +1,10 @@
 # tetris_yo
 
+[![Build & Deploy](https://github.com/shd101wyy/tetris_yo/actions/workflows/build-and-deploy.yml/badge.svg)](https://github.com/shd101wyy/tetris_yo/actions/workflows/build-and-deploy.yml)
+
 A classic Tetris game written in [Yo](https://github.com/shd101wyy/Yo) using [raylib_yo](https://github.com/shd101wyy/raylib_yo) bindings.
+
+**[▶ Play in Browser](https://shd101wyy.github.io/tetris_yo/tetris_yo_wasm.html)**
 
 This project demonstrates:
 - Using Yo's **build system** with git dependencies
@@ -114,15 +118,17 @@ python -m http.server 8080
 
 ```
 tetris_yo/
-├── build.yo          # Build configuration (native + WASM targets, dependencies)
-├── yo.lock           # Dependency lock file
+├── .github/workflows/    # CI/CD — builds WASM and deploys to GitHub Pages
+├── build.yo              # Build configuration (native + WASM targets)
+├── deps.yo               # Dependencies (managed by `yo install`)
+├── yo.lock               # Dependency lock file
 ├── src/
-│   ├── lib.yo        # Library root (empty)
-│   └── main.yo       # Game implementation (~600 lines)
+│   ├── lib.yo            # Library root (empty)
+│   └── main.yo           # Game implementation (~600 lines)
 ├── yo-out/
 │   ├── x86_64-windows-msvc/bin/   # Native build output
 │   └── wasm32-emscripten/bin/     # WASM build output (.html + .js + .wasm)
-└── devenv.nix        # Development environment
+└── devenv.nix            # Development environment
 ```
 
 ## Implementation Notes
