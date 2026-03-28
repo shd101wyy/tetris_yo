@@ -73,7 +73,7 @@ git clone --depth 1 --branch 5.5 https://github.com/raysan5/raylib.git raylib-wa
 cd raylib-wasm-build
 
 # Configure with Emscripten
-emcmake cmake -B build -G Ninja -DPLATFORM=Web -DCMAKE_BUILD_TYPE=Release
+emcmake cmake -B build -G Ninja -DPLATFORM=Web -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=OFF
 
 # Build and install to Emscripten sysroot
 emmake ninja -C build
