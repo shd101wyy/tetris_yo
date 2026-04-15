@@ -13,7 +13,7 @@
 build :: import "std/build";
 
 // --- Dependencies ---
-raylib_yo :: build.dependency({ name: "raylib_yo", url: "https://github.com/shd101wyy/raylib_yo.git", ref: "v0.0.4" });
+raylib_yo :: build.dependency({ name: "raylib_yo", url: "https://github.com/shd101wyy/raylib_yo.git", ref: "v0.0.5" });
 
 // --- Import list ---
 imports :: ComptimeList(build.ImportEntry)(

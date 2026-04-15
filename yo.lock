@@ -5,6 +5,6 @@
 [[dependencies]]
 name = "raylib_yo"
 url = "https://github.com/shd101wyy/raylib_yo.git"
-ref = "v0.0.4"
-commit = "7685ded1a1405c0282e364811dd1ccee6822bb98"
-hash = "sha256-a8a7c8ad03521f0edef4a92134d57d5e56ff5d87783b6dea358d9516e785bbfd"
+ref = "v0.0.5"
+commit = "ff20d77680339092c98de42d1e8bb106641ed412"
+hash = "sha256-f4ccb12383394cf2942590c3ae6d680e4c66b1989aa4f0b191228270be805268"
