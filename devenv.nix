@@ -15,6 +15,7 @@
     gdb
     pkg-config
     raylib
+    emscripten
   ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
     liburing
   ];
