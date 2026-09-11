@@ -1,5 +1,9 @@
-build :: import "std/build";
-{ imports } :: import "./deps.yo";
+build :: import("std/build");
+
+raylib :: build.system_library({
+  name: "raylib",
+  defines: "NOMINMAX NOGDI NOUSER"
+});
 
 exe :: build.executable({
   name: "tetris_yo",
@@ -10,12 +14,13 @@ exe_wasm :: build.executable({
   name: "tetris_yo_wasm",
   root: "./src/main.yo",
   optimize: build.Optimize.ReleaseFast,
-  target: build.CompilationTarget.Wasm32_Emscripten
+  target: build.CompilationTarget.Wasm32_Unknown_Emscripten
 });
 
-// Import the raylib_yo module — system libraries (raylib) are transitively propagated
-exe.add_import_list(imports);
-exe_wasm.add_import_list(imports);
+// raylib_yo is vendored at ./vendor/raylib_yo (pinned to v0.0.6) and imported
+// from src/main.yo by relative path. Link the system raylib for the native
+// target; the WASM target picks raylib up from the Emscripten sysroot.
+exe.link(raylib);
 
 // Emscripten-specific flags: GLFW support and ASYNCIFY for the game loop
 exe_wasm.add_c_flags("-sUSE_GLFW=3 -sASYNCIFY -DPLATFORM_WEB");
