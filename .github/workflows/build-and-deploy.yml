@@ -50,19 +50,24 @@ jobs:
           SYSROOT=$(em-config CACHE)/sysroot
           cp "$SYSROOT/lib/libraylib.a" "$SYSROOT/lib/wasm32-emscripten/libraylib.a" 2>/dev/null || true
 
+      # `yo fetch` was removed with the dependency-system redesign. Dependencies
+      # are declared in yo.toml and pinned in yo.lock; `--locked` makes the
+      # committed lock authoritative, so a resolution that would change it fails
+      # here rather than drifting. (`yo build` would fetch on its own, but being
+      # explicit keeps the lock honest.)
       - name: Fetch dependencies
-        run: yo fetch
+        run: yo install --locked
 
       - name: Build WASM target
         run: yo build install_wasm
 
       - name: Prepare Pages artifact
-        run: cp yo-out/wasm32-emscripten/bin/tetris_yo_wasm.html yo-out/wasm32-emscripten/bin/index.html
+        run: cp yo-out/wasm32-unknown-emscripten/bin/tetris_yo_wasm.html yo-out/wasm32-unknown-emscripten/bin/index.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: yo-out/wasm32-emscripten/bin
+          path: yo-out/wasm32-unknown-emscripten/bin
 
   deploy:
     needs: build

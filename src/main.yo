@@ -1,21 +1,51 @@
+pragma(Pragma.AllowUnsafe);
 // Tetris — implemented in Yo using raylib bindings
 // Based on raylib classic tetris by Ramon Santamaria
-{ InitWindow, CloseWindow, WindowShouldClose, SetTargetFPS,
-  BeginDrawing, EndDrawing, ClearBackground,
-  DrawRectangle, DrawRectangleLines, DrawLine, DrawText,
-  MeasureText, TextFormat, Fade,
-  IsKeyPressed, IsKeyDown,
+{
+  InitWindow,
+  CloseWindow,
+  WindowShouldClose,
+  SetTargetFPS,
+  BeginDrawing,
+  EndDrawing,
+  ClearBackground,
+  DrawRectangle,
+  DrawRectangleLines,
+  DrawLine,
+  DrawText,
+  MeasureText,
+  TextFormat,
+  Fade,
+  IsKeyPressed,
+  IsKeyDown,
   GetRandomValue,
-  Color, Rectangle,
-  KEY_ENTER, KEY_RIGHT, KEY_LEFT, KEY_DOWN, KEY_UP, KEY_P,
-  LIGHTGRAY, GRAY, DARKGRAY, MAROON, RAYWHITE,
-  SKYBLUE, BLUE, ORANGE, YELLOW, GREEN, RED, PURPLE } :: import "raylib_yo";
+  Color,
+  Rectangle,
+  KEY_ENTER,
+  KEY_RIGHT,
+  KEY_LEFT,
+  KEY_DOWN,
+  KEY_UP,
+  KEY_P,
+  LIGHTGRAY,
+  GRAY,
+  DARKGRAY,
+  MAROON,
+  RAYWHITE,
+  SKYBLUE,
+  BLUE,
+  ORANGE,
+  YELLOW,
+  GREEN,
+  RED,
+  PURPLE
+} :: import("raylib_yo");
 
 // Grid square states
-EMPTY  :: i32(0);
+EMPTY :: i32(0);
 MOVING :: i32(1);
-FULL   :: i32(2);
-BLOCK  :: i32(3);
+FULL :: i32(2);
+BLOCK :: i32(3);
 FADING :: i32(4);
 
 // Piece types (0-6) corresponding to standard Tetris tetrominoes
@@ -27,9 +57,8 @@ PIECE_T :: i32(4); // T-piece
 PIECE_S :: i32(5); // S-piece
 PIECE_Z :: i32(6); // Z-piece
 PIECE_NONE :: i32(7); // no piece (border/empty)
-
 // Color for each piece type
-piece_color :: (fn(pt: i32) -> Color)(
+piece_color :: (fn(pt : i32) -> Color)(
   cond(
     (pt == PIECE_O) => YELLOW,
     (pt == PIECE_L) => ORANGE,
@@ -43,63 +72,63 @@ piece_color :: (fn(pt: i32) -> Color)(
 );
 
 // Darker variant for block borders
-piece_color_dark :: (fn(pt: i32) -> Color)(
-  Fade(piece_color(pt), f32(0.6))
+piece_color_dark :: (fn(pt : i32) -> Color)(
+  unsafe(Fade(piece_color(pt), f32(0.6)))
 );
 
 // Game parameters
-SQUARE_SIZE      :: i32(33);
-GRID_H           :: i32(12);
-GRID_V           :: i32(20);
-LATERAL_SPEED    :: i32(10);
-TURNING_SPEED    :: i32(12);
-FAST_FALL_AWAIT  :: i32(30);
-FADING_TIME      :: i32(33);
-SCREEN_W         :: i32(1000);
-SCREEN_H         :: i32(750);
+SQUARE_SIZE :: i32(33);
+GRID_H :: i32(12);
+GRID_V :: i32(20);
+LATERAL_SPEED :: i32(10);
+TURNING_SPEED :: i32(12);
+FAST_FALL_AWAIT :: i32(30);
+FADING_TIME :: i32(33);
+SCREEN_W :: i32(1000);
+SCREEN_H :: i32(750);
 
 // 2D → flat index helpers (column-major: grid[col][row])
-grid_idx :: (fn(col: i32, row: i32) -> usize)(
-  usize(((col * GRID_V) + row))
+grid_idx :: (fn(col : i32, row : i32) -> usize)(
+  usize((col * GRID_V) + row)
 );
-piece_idx :: (fn(col: i32, row: i32) -> usize)(
-  usize(((col * i32(4)) + row))
+piece_idx :: (fn(col : i32, row : i32) -> usize)(
+  usize((col * i32(4)) + row)
 );
 
 main :: (fn() -> unit)({
-  InitWindow(SCREEN_W, SCREEN_H, "classic game: tetris");
-  SetTargetFPS(i32(60));
+  unsafe(InitWindow(SCREEN_W, SCREEN_H, "classic game: tetris"));
+  unsafe(SetTargetFPS(i32(60)));
 
   // ═══════════════════ Mutable game state ═══════════════════
   (gameOver : bool) = false;
-  (pause    : bool) = false;
+  (pause : bool) = false;
 
-  (grid     : Array(i32, 240)) = Array(i32, 240).fill(EMPTY);
-  (piece    : Array(i32,  16)) = Array(i32,  16).fill(EMPTY);
-  (incoming : Array(i32,  16)) = Array(i32,  16).fill(EMPTY);
+  (grid : Array(i32, 240)) = Array(i32, 240).fill(EMPTY);
+  (piece : Array(i32, 16)) = Array(i32, 16).fill(EMPTY);
+  (incoming : Array(i32, 16)) = Array(i32, 16).fill(EMPTY);
 
   // Color tracking: which piece type occupies each cell
   (colorGrid : Array(i32, 240)) = Array(i32, 240).fill(PIECE_NONE);
-  (currentPieceType  : i32) = PIECE_NONE;
+  (currentPieceType : i32) = PIECE_NONE;
   (incomingPieceType : i32) = PIECE_NONE;
 
   (pieceX : i32) = i32(0);
   (pieceY : i32) = i32(0);
 
-  (beginPlay   : bool) = true;
+  (beginPlay : bool) = true;
   (pieceActive : bool) = false;
-  (detection   : bool) = false;
-  (lineToDelete: bool) = false;
+  (detection : bool) = false;
+  (lineToDelete : bool) = false;
 
   (fadingColor : Color) = GRAY;
-  (lines       : i32)   = i32(0);
+  (lines : i32) = i32(0);
 
-  (gravityCounter  : i32) = i32(0);
-  (lateralCounter  : i32) = i32(0);
-  (turnCounter     : i32) = i32(0);
+  (gravityCounter : i32) = i32(0);
+  (lateralCounter : i32) = i32(0);
+  (turnCounter : i32) = i32(0);
   (fastFallCounter : i32) = i32(0);
   (fadeLineCounter : i32) = i32(0);
-  (gravitySpeed    : i32) = i32(30);
+  (gravitySpeed : i32) = i32(30);
 
   // Reusable loop counters
   (ci : i32) = i32(0);
@@ -107,26 +136,25 @@ main :: (fn() -> unit)({
 
   // ═══════════════════ Init grid borders ═══════════════════
   ci = i32(0);
-  while (ci < GRID_H), ci = (ci + i32(1)), {
+  while(ci < GRID_H, ci = (ci + i32(1)), {
     cj = i32(0);
-    while (cj < GRID_V), cj = (cj + i32(1)), {
+    while(cj < GRID_V, cj = (cj + i32(1)), {
       cond(
-        (((cj == (GRID_V - i32(1))) || (ci == i32(0))) || (ci == (GRID_H - i32(1)))) => {
+        ((cj == (GRID_V - i32(1))) || (ci == i32(0)) || (ci == (GRID_H - i32(1)))) => {
           grid(grid_idx(ci, cj)) = BLOCK;
         },
         true => ()
       );
-    };
-  };
+    });
+  });
 
   // ═══════════════════ Game loop ═══════════════════
-  while !(WindowShouldClose()), {
-
+  while(!unsafe(WindowShouldClose()), {
     // ────────────────── UPDATE ──────────────────
     cond(
       gameOver => {
         cond(
-          IsKeyPressed(KEY_ENTER) => {
+          unsafe(IsKeyPressed(KEY_ENTER)) => {
             gameOver = false;
             pause = false;
             beginPlay = true;
@@ -147,30 +175,39 @@ main :: (fn() -> unit)({
             incomingPieceType = PIECE_NONE;
             // Reset grid
             ci = i32(0);
-            while (ci < GRID_H), ci = (ci + i32(1)), {
+            while(ci < GRID_H, ci = (ci + i32(1)), {
               cj = i32(0);
-              while (cj < GRID_V), cj = (cj + i32(1)), {
+              while(cj < GRID_V, cj = (cj + i32(1)), {
                 colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
                 cond(
-                  (((cj == (GRID_V - i32(1))) || (ci == i32(0))) || (ci == (GRID_H - i32(1)))) =>
-                    { grid(grid_idx(ci, cj)) = BLOCK; },
+                  ((cj == (GRID_V - i32(1))) || (ci == i32(0)) || (ci == (GRID_H - i32(1)))) =>
+                    {
+                      grid(grid_idx(ci, cj)) = BLOCK;
+                    },
                   true =>
-                    { grid(grid_idx(ci, cj)) = EMPTY; }
+                    {
+                      grid(grid_idx(ci, cj)) = EMPTY;
+                    }
                 );
-              };
-            };
+              });
+            });
             // Reset incoming
             ci = i32(0);
-            while (ci < i32(16)), ci = (ci + i32(1)), {
+            while(ci < i32(16), ci = (ci + i32(1)), {
               incoming(usize(ci)) = EMPTY;
-            };
+            });
           },
           true => ()
         );
       },
       true => {
         // Toggle pause
-        cond(IsKeyPressed(KEY_P) => { pause = !(pause); }, true => ());
+        cond(
+          unsafe(IsKeyPressed(KEY_P)) => {
+            pause = !pause;
+          },
+          true => ()
+        );
 
         cond(
           pause => (),
@@ -180,44 +217,48 @@ main :: (fn() -> unit)({
                 // ── Fading animation ──
                 fadeLineCounter = (fadeLineCounter + i32(1));
                 cond(
-                  ((fadeLineCounter % i32(8)) < i32(4)) => { fadingColor = MAROON; },
-                  true => { fadingColor = GRAY; }
+                  ((fadeLineCounter % i32(8)) < i32(4)) => {
+                    fadingColor = MAROON;
+                  },
+                  true => {
+                    fadingColor = GRAY;
+                  }
                 );
                 cond(
                   (fadeLineCounter >= FADING_TIME) => {
                     (deletedLines : i32) = i32(0);
                     cj = (GRID_V - i32(2));
-                    while (cj >= i32(0)), cj = (cj - i32(1)), {
-                      while (grid(grid_idx(i32(1), cj)) == FADING), {
+                    while(cj >= i32(0), cj = (cj - i32(1)), {
+                      while(grid(grid_idx(i32(1), cj)) == FADING, {
                         ci = i32(1);
-                        while (ci < (GRID_H - i32(1))), ci = (ci + i32(1)), {
+                        while(ci < (GRID_H - i32(1)), ci = (ci + i32(1)), {
                           grid(grid_idx(ci, cj)) = EMPTY;
                           colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
-                        };
+                        });
                         (j2 : i32) = (cj - i32(1));
-                        while (j2 >= i32(0)), j2 = (j2 - i32(1)), {
+                        while(j2 >= i32(0), j2 = (j2 - i32(1)), {
                           (i2 : i32) = i32(1);
-                          while (i2 < (GRID_H - i32(1))), i2 = (i2 + i32(1)), {
+                          while(i2 < (GRID_H - i32(1)), i2 = (i2 + i32(1)), {
                             cond(
                               (grid(grid_idx(i2, j2)) == FULL) => {
-                                grid(grid_idx(i2, (j2 + i32(1)))) = FULL;
+                                grid(grid_idx(i2, j2 + i32(1))) = FULL;
                                 grid(grid_idx(i2, j2)) = EMPTY;
-                                colorGrid(grid_idx(i2, (j2 + i32(1)))) = colorGrid(grid_idx(i2, j2));
+                                colorGrid(grid_idx(i2, j2 + i32(1))) = colorGrid(grid_idx(i2, j2));
                                 colorGrid(grid_idx(i2, j2)) = PIECE_NONE;
                               },
                               (grid(grid_idx(i2, j2)) == FADING) => {
-                                grid(grid_idx(i2, (j2 + i32(1)))) = FADING;
+                                grid(grid_idx(i2, j2 + i32(1))) = FADING;
                                 grid(grid_idx(i2, j2)) = EMPTY;
-                                colorGrid(grid_idx(i2, (j2 + i32(1)))) = colorGrid(grid_idx(i2, j2));
+                                colorGrid(grid_idx(i2, j2 + i32(1))) = colorGrid(grid_idx(i2, j2));
                                 colorGrid(grid_idx(i2, j2)) = PIECE_NONE;
                               },
                               true => ()
                             );
-                          };
-                        };
+                          });
+                        });
                         deletedLines = (deletedLines + i32(1));
-                      };
-                    };
+                      });
+                    });
                     fadeLineCounter = i32(0);
                     lineToDelete = false;
                     lines = (lines + deletedLines);
@@ -228,7 +269,7 @@ main :: (fn() -> unit)({
               true => {
                 // ── Main game logic ──
                 cond(
-                  !(pieceActive) => {
+                  !pieceActive => {
                     // ── Create piece ──
                     pieceX = ((GRID_H - i32(4)) / i32(2));
                     pieceY = i32(0);
@@ -236,18 +277,55 @@ main :: (fn() -> unit)({
                     cond(
                       beginPlay => {
                         // Generate first incoming piece
-                        (r : i32) = GetRandomValue(i32(0), i32(6));
+                        (r : i32) = unsafe(GetRandomValue(i32(0), i32(6)));
                         incomingPieceType = r;
                         ci = i32(0);
-                        while (ci < i32(16)), ci = (ci + i32(1)), { incoming(usize(ci)) = EMPTY; };
+                        while(ci < i32(16), ci = (ci + i32(1)), {
+                          incoming(usize(ci)) = EMPTY;
+                        });
                         cond(
-                          (r == i32(0)) => { incoming(piece_idx(i32(1),i32(1)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; incoming(piece_idx(i32(1),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(2)))=MOVING; },
-                          (r == i32(1)) => { incoming(piece_idx(i32(1),i32(0)))=MOVING; incoming(piece_idx(i32(1),i32(1)))=MOVING; incoming(piece_idx(i32(1),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(2)))=MOVING; },
-                          (r == i32(2)) => { incoming(piece_idx(i32(1),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(0)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; incoming(piece_idx(i32(2),i32(2)))=MOVING; },
-                          (r == i32(3)) => { incoming(piece_idx(i32(0),i32(1)))=MOVING; incoming(piece_idx(i32(1),i32(1)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; incoming(piece_idx(i32(3),i32(1)))=MOVING; },
-                          (r == i32(4)) => { incoming(piece_idx(i32(1),i32(0)))=MOVING; incoming(piece_idx(i32(1),i32(1)))=MOVING; incoming(piece_idx(i32(1),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; },
-                          (r == i32(5)) => { incoming(piece_idx(i32(1),i32(1)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; incoming(piece_idx(i32(2),i32(2)))=MOVING; incoming(piece_idx(i32(3),i32(2)))=MOVING; },
-                          true =>          { incoming(piece_idx(i32(1),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; incoming(piece_idx(i32(3),i32(1)))=MOVING; }
+                          (r == i32(0)) => {
+                            incoming(piece_idx(i32(1), i32(1))) = MOVING;
+                            incoming(piece_idx(i32(2), i32(1))) = MOVING;
+                            incoming(piece_idx(i32(1), i32(2))) = MOVING;
+                            incoming(piece_idx(i32(2), i32(2))) = MOVING;
+                          },
+                          (r == i32(1)) => {
+                            incoming(piece_idx(i32(1), i32(0))) = MOVING;
+                            incoming(piece_idx(i32(1), i32(1))) = MOVING;
+                            incoming(piece_idx(i32(1), i32(2))) = MOVING;
+                            incoming(piece_idx(i32(2), i32(2))) = MOVING;
+                          },
+                          (r == i32(2)) => {
+                            incoming(piece_idx(i32(1), i32(2))) = MOVING;
+                            incoming(piece_idx(i32(2), i32(0))) = MOVING;
+                            incoming(piece_idx(i32(2), i32(1))) = MOVING;
+                            incoming(piece_idx(i32(2), i32(2))) = MOVING;
+                          },
+                          (r == i32(3)) => {
+                            incoming(piece_idx(i32(0), i32(1))) = MOVING;
+                            incoming(piece_idx(i32(1), i32(1))) = MOVING;
+                            incoming(piece_idx(i32(2), i32(1))) = MOVING;
+                            incoming(piece_idx(i32(3), i32(1))) = MOVING;
+                          },
+                          (r == i32(4)) => {
+                            incoming(piece_idx(i32(1), i32(0))) = MOVING;
+                            incoming(piece_idx(i32(1), i32(1))) = MOVING;
+                            incoming(piece_idx(i32(1), i32(2))) = MOVING;
+                            incoming(piece_idx(i32(2), i32(1))) = MOVING;
+                          },
+                          (r == i32(5)) => {
+                            incoming(piece_idx(i32(1), i32(1))) = MOVING;
+                            incoming(piece_idx(i32(2), i32(1))) = MOVING;
+                            incoming(piece_idx(i32(2), i32(2))) = MOVING;
+                            incoming(piece_idx(i32(3), i32(2))) = MOVING;
+                          },
+                          true => {
+                            incoming(piece_idx(i32(1), i32(2))) = MOVING;
+                            incoming(piece_idx(i32(2), i32(2))) = MOVING;
+                            incoming(piece_idx(i32(2), i32(1))) = MOVING;
+                            incoming(piece_idx(i32(3), i32(1))) = MOVING;
+                          }
                         );
                         beginPlay = false;
                       },
@@ -257,39 +335,76 @@ main :: (fn() -> unit)({
                     // Copy incoming → piece, transfer piece type
                     currentPieceType = incomingPieceType;
                     ci = i32(0);
-                    while (ci < i32(16)), ci = (ci + i32(1)), {
+                    while(ci < i32(16), ci = (ci + i32(1)), {
                       piece(usize(ci)) = incoming(usize(ci));
-                    };
+                    });
 
                     // Generate next incoming piece
-                    (r2 : i32) = GetRandomValue(i32(0), i32(6));
+                    (r2 : i32) = unsafe(GetRandomValue(i32(0), i32(6)));
                     incomingPieceType = r2;
                     ci = i32(0);
-                    while (ci < i32(16)), ci = (ci + i32(1)), { incoming(usize(ci)) = EMPTY; };
+                    while(ci < i32(16), ci = (ci + i32(1)), {
+                      incoming(usize(ci)) = EMPTY;
+                    });
                     cond(
-                      (r2 == i32(0)) => { incoming(piece_idx(i32(1),i32(1)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; incoming(piece_idx(i32(1),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(2)))=MOVING; },
-                      (r2 == i32(1)) => { incoming(piece_idx(i32(1),i32(0)))=MOVING; incoming(piece_idx(i32(1),i32(1)))=MOVING; incoming(piece_idx(i32(1),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(2)))=MOVING; },
-                      (r2 == i32(2)) => { incoming(piece_idx(i32(1),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(0)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; incoming(piece_idx(i32(2),i32(2)))=MOVING; },
-                      (r2 == i32(3)) => { incoming(piece_idx(i32(0),i32(1)))=MOVING; incoming(piece_idx(i32(1),i32(1)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; incoming(piece_idx(i32(3),i32(1)))=MOVING; },
-                      (r2 == i32(4)) => { incoming(piece_idx(i32(1),i32(0)))=MOVING; incoming(piece_idx(i32(1),i32(1)))=MOVING; incoming(piece_idx(i32(1),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; },
-                      (r2 == i32(5)) => { incoming(piece_idx(i32(1),i32(1)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; incoming(piece_idx(i32(2),i32(2)))=MOVING; incoming(piece_idx(i32(3),i32(2)))=MOVING; },
-                      true =>           { incoming(piece_idx(i32(1),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(2)))=MOVING; incoming(piece_idx(i32(2),i32(1)))=MOVING; incoming(piece_idx(i32(3),i32(1)))=MOVING; }
+                      (r2 == i32(0)) => {
+                        incoming(piece_idx(i32(1), i32(1))) = MOVING;
+                        incoming(piece_idx(i32(2), i32(1))) = MOVING;
+                        incoming(piece_idx(i32(1), i32(2))) = MOVING;
+                        incoming(piece_idx(i32(2), i32(2))) = MOVING;
+                      },
+                      (r2 == i32(1)) => {
+                        incoming(piece_idx(i32(1), i32(0))) = MOVING;
+                        incoming(piece_idx(i32(1), i32(1))) = MOVING;
+                        incoming(piece_idx(i32(1), i32(2))) = MOVING;
+                        incoming(piece_idx(i32(2), i32(2))) = MOVING;
+                      },
+                      (r2 == i32(2)) => {
+                        incoming(piece_idx(i32(1), i32(2))) = MOVING;
+                        incoming(piece_idx(i32(2), i32(0))) = MOVING;
+                        incoming(piece_idx(i32(2), i32(1))) = MOVING;
+                        incoming(piece_idx(i32(2), i32(2))) = MOVING;
+                      },
+                      (r2 == i32(3)) => {
+                        incoming(piece_idx(i32(0), i32(1))) = MOVING;
+                        incoming(piece_idx(i32(1), i32(1))) = MOVING;
+                        incoming(piece_idx(i32(2), i32(1))) = MOVING;
+                        incoming(piece_idx(i32(3), i32(1))) = MOVING;
+                      },
+                      (r2 == i32(4)) => {
+                        incoming(piece_idx(i32(1), i32(0))) = MOVING;
+                        incoming(piece_idx(i32(1), i32(1))) = MOVING;
+                        incoming(piece_idx(i32(1), i32(2))) = MOVING;
+                        incoming(piece_idx(i32(2), i32(1))) = MOVING;
+                      },
+                      (r2 == i32(5)) => {
+                        incoming(piece_idx(i32(1), i32(1))) = MOVING;
+                        incoming(piece_idx(i32(2), i32(1))) = MOVING;
+                        incoming(piece_idx(i32(2), i32(2))) = MOVING;
+                        incoming(piece_idx(i32(3), i32(2))) = MOVING;
+                      },
+                      true => {
+                        incoming(piece_idx(i32(1), i32(2))) = MOVING;
+                        incoming(piece_idx(i32(2), i32(2))) = MOVING;
+                        incoming(piece_idx(i32(2), i32(1))) = MOVING;
+                        incoming(piece_idx(i32(3), i32(1))) = MOVING;
+                      }
                     );
 
                     // Place piece on grid + set color
                     ci = pieceX;
-                    while (ci < (pieceX + i32(4))), ci = (ci + i32(1)), {
+                    while(ci < (pieceX + i32(4)), ci = (ci + i32(1)), {
                       cj = i32(0);
-                      while (cj < i32(4)), cj = (cj + i32(1)), {
+                      while(cj < i32(4), cj = (cj + i32(1)), {
                         cond(
-                          (piece(piece_idx((ci - pieceX), cj)) == MOVING) => {
+                          (piece(piece_idx(ci - pieceX, cj)) == MOVING) => {
                             grid(grid_idx(ci, cj)) = MOVING;
                             colorGrid(grid_idx(ci, cj)) = currentPieceType;
                           },
                           true => ()
                         );
-                      };
-                    };
+                      });
+                    });
 
                     pieceActive = true;
                     fastFallCounter = i32(0);
@@ -297,13 +412,28 @@ main :: (fn() -> unit)({
                   true => {
                     // ── Piece falling ──
                     fastFallCounter = (fastFallCounter + i32(1));
-                    gravityCounter  = (gravityCounter  + i32(1));
-                    lateralCounter  = (lateralCounter  + i32(1));
-                    turnCounter     = (turnCounter     + i32(1));
+                    gravityCounter = (gravityCounter + i32(1));
+                    lateralCounter = (lateralCounter + i32(1));
+                    turnCounter = (turnCounter + i32(1));
 
-                    cond((IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)) => { lateralCounter = LATERAL_SPEED; }, true => ());
-                    cond(IsKeyPressed(KEY_UP) => { turnCounter = TURNING_SPEED; }, true => ());
-                    cond((IsKeyDown(KEY_DOWN) && (fastFallCounter >= FAST_FALL_AWAIT)) => { gravityCounter = (gravityCounter + gravitySpeed); }, true => ());
+                    cond(
+                      (unsafe(IsKeyPressed(KEY_LEFT)) || unsafe(IsKeyPressed(KEY_RIGHT))) => {
+                        lateralCounter = LATERAL_SPEED;
+                      },
+                      true => ()
+                    );
+                    cond(
+                      unsafe(IsKeyPressed(KEY_UP)) => {
+                        turnCounter = TURNING_SPEED;
+                      },
+                      true => ()
+                    );
+                    cond(
+                      (unsafe(IsKeyDown(KEY_DOWN)) && (fastFallCounter >= FAST_FALL_AWAIT)) => {
+                        gravityCounter = (gravityCounter + gravitySpeed);
+                      },
+                      true => ()
+                    );
 
                     // ── Gravity tick ──
                     cond(
@@ -311,70 +441,80 @@ main :: (fn() -> unit)({
                         // Check detection (collision below)
                         detection = false;
                         cj = (GRID_V - i32(2));
-                        while (cj >= i32(0)), cj = (cj - i32(1)), {
+                        while(cj >= i32(0), cj = (cj - i32(1)), {
                           ci = i32(1);
-                          while (ci < (GRID_H - i32(1))), ci = (ci + i32(1)), {
+                          while(ci < (GRID_H - i32(1)), ci = (ci + i32(1)), {
                             cond(
-                              ((grid(grid_idx(ci, cj)) == MOVING) && ((grid(grid_idx(ci, (cj + i32(1)))) == FULL) || (grid(grid_idx(ci, (cj + i32(1)))) == BLOCK))) => {
+                              ((grid(grid_idx(ci, cj)) == MOVING) && ((grid(grid_idx(ci, cj + i32(1))) == FULL) || (grid(grid_idx(ci, cj + i32(1))) == BLOCK))) => {
                                 detection = true;
                               },
                               true => ()
                             );
-                          };
-                        };
+                          });
+                        });
 
                         // Resolve falling
                         cond(
                           detection => {
                             cj = (GRID_V - i32(2));
-                            while (cj >= i32(0)), cj = (cj - i32(1)), {
+                            while(cj >= i32(0), cj = (cj - i32(1)), {
                               ci = i32(1);
-                              while (ci < (GRID_H - i32(1))), ci = (ci + i32(1)), {
-                                cond((grid(grid_idx(ci, cj)) == MOVING) => { grid(grid_idx(ci, cj)) = FULL; }, true => ());
-                              };
-                            };
+                              while(ci < (GRID_H - i32(1)), ci = (ci + i32(1)), {
+                                cond(
+                                  (grid(grid_idx(ci, cj)) == MOVING) => {
+                                    grid(grid_idx(ci, cj)) = FULL;
+                                  },
+                                  true => ()
+                                );
+                              });
+                            });
                             detection = false;
                             pieceActive = false;
                           },
                           true => {
                             cj = (GRID_V - i32(2));
-                            while (cj >= i32(0)), cj = (cj - i32(1)), {
+                            while(cj >= i32(0), cj = (cj - i32(1)), {
                               ci = i32(1);
-                              while (ci < (GRID_H - i32(1))), ci = (ci + i32(1)), {
+                              while(ci < (GRID_H - i32(1)), ci = (ci + i32(1)), {
                                 cond(
                                   (grid(grid_idx(ci, cj)) == MOVING) => {
-                                    grid(grid_idx(ci, (cj + i32(1)))) = MOVING;
+                                    grid(grid_idx(ci, cj + i32(1))) = MOVING;
                                     grid(grid_idx(ci, cj)) = EMPTY;
-                                    colorGrid(grid_idx(ci, (cj + i32(1)))) = colorGrid(grid_idx(ci, cj));
+                                    colorGrid(grid_idx(ci, cj + i32(1))) = colorGrid(grid_idx(ci, cj));
                                     colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
                                   },
                                   true => ()
                                 );
-                              };
-                            };
+                              });
+                            });
                             pieceY = (pieceY + i32(1));
                           }
                         );
 
                         // Check line completion
                         cj = (GRID_V - i32(2));
-                        while (cj >= i32(0)), cj = (cj - i32(1)), {
+                        while(cj >= i32(0), cj = (cj - i32(1)), {
                           (calc : i32) = i32(0);
                           ci = i32(1);
-                          while (ci < (GRID_H - i32(1))), ci = (ci + i32(1)), {
-                            cond((grid(grid_idx(ci, cj)) == FULL) => { calc = (calc + i32(1)); }, true => ());
+                          while(ci < (GRID_H - i32(1)), ci = (ci + i32(1)), {
+                            cond(
+                              (grid(grid_idx(ci, cj)) == FULL) => {
+                                calc = (calc + i32(1));
+                              },
+                              true => ()
+                            );
                             cond(
                               (calc == (GRID_H - i32(2))) => {
                                 lineToDelete = true;
                                 (zz : i32) = i32(1);
-                                while (zz < (GRID_H - i32(1))), zz = (zz + i32(1)), {
+                                while(zz < (GRID_H - i32(1)), zz = (zz + i32(1)), {
                                   grid(grid_idx(zz, cj)) = FADING;
-                                };
+                                });
                               },
                               true => ()
                             );
-                          };
-                        };
+                          });
+                        });
 
                         gravityCounter = i32(0);
                       },
@@ -386,71 +526,71 @@ main :: (fn() -> unit)({
                       (lateralCounter >= LATERAL_SPEED) => {
                         (collision : bool) = false;
                         cond(
-                          IsKeyDown(KEY_LEFT) => {
+                          unsafe(IsKeyDown(KEY_LEFT)) => {
                             cj = (GRID_V - i32(2));
-                            while (cj >= i32(0)), cj = (cj - i32(1)), {
+                            while(cj >= i32(0), cj = (cj - i32(1)), {
                               ci = i32(1);
-                              while (ci < (GRID_H - i32(1))), ci = (ci + i32(1)), {
+                              while(ci < (GRID_H - i32(1)), ci = (ci + i32(1)), {
                                 cond(
-                                  ((grid(grid_idx(ci, cj)) == MOVING) && (((ci - i32(1)) == i32(0)) || (grid(grid_idx((ci - i32(1)), cj)) == FULL))) => {
+                                  ((grid(grid_idx(ci, cj)) == MOVING) && (((ci - i32(1)) == i32(0)) || (grid(grid_idx(ci - i32(1), cj)) == FULL))) => {
                                     collision = true;
                                   },
                                   true => ()
                                 );
-                              };
-                            };
+                              });
+                            });
                             cond(
-                              !(collision) => {
+                              !collision => {
                                 cj = (GRID_V - i32(2));
-                                while (cj >= i32(0)), cj = (cj - i32(1)), {
+                                while(cj >= i32(0), cj = (cj - i32(1)), {
                                   ci = i32(1);
-                                  while (ci < (GRID_H - i32(1))), ci = (ci + i32(1)), {
+                                  while(ci < (GRID_H - i32(1)), ci = (ci + i32(1)), {
                                     cond(
                                       (grid(grid_idx(ci, cj)) == MOVING) => {
-                                        grid(grid_idx((ci - i32(1)), cj)) = MOVING;
+                                        grid(grid_idx(ci - i32(1), cj)) = MOVING;
                                         grid(grid_idx(ci, cj)) = EMPTY;
-                                        colorGrid(grid_idx((ci - i32(1)), cj)) = colorGrid(grid_idx(ci, cj));
+                                        colorGrid(grid_idx(ci - i32(1), cj)) = colorGrid(grid_idx(ci, cj));
                                         colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
                                       },
                                       true => ()
                                     );
-                                  };
-                                };
+                                  });
+                                });
                                 pieceX = (pieceX - i32(1));
                               },
                               true => ()
                             );
                           },
-                          IsKeyDown(KEY_RIGHT) => {
+                          unsafe(IsKeyDown(KEY_RIGHT)) => {
                             cj = (GRID_V - i32(2));
-                            while (cj >= i32(0)), cj = (cj - i32(1)), {
+                            while(cj >= i32(0), cj = (cj - i32(1)), {
                               ci = i32(1);
-                              while (ci < (GRID_H - i32(1))), ci = (ci + i32(1)), {
+                              while(ci < (GRID_H - i32(1)), ci = (ci + i32(1)), {
                                 cond(
-                                  ((grid(grid_idx(ci, cj)) == MOVING) && (((ci + i32(1)) == (GRID_H - i32(1))) || (grid(grid_idx((ci + i32(1)), cj)) == FULL))) => {
+                                  ((grid(grid_idx(ci, cj)) == MOVING) && (((ci + i32(1)) == (GRID_H - i32(1))) || (grid(grid_idx(ci + i32(1), cj)) == FULL))) => {
                                     collision = true;
                                   },
                                   true => ()
                                 );
-                              };
-                            };
+                              });
+                            });
                             cond(
-                              !(collision) => {
+                              !collision => {
                                 cj = (GRID_V - i32(2));
-                                while (cj >= i32(0)), cj = (cj - i32(1)), {
+                                while(cj >= i32(0), cj = (cj - i32(1)), {
                                   ci = (GRID_H - i32(1));
-                                  while (ci >= i32(1)), ci = (ci - i32(1)), {
+                                  while(ci >= i32(1), ci = (ci - i32(1)), {
                                     cond(
                                       (grid(grid_idx(ci, cj)) == MOVING) => {
-                                        grid(grid_idx((ci + i32(1)), cj)) = MOVING;
+                                        grid(grid_idx(ci + i32(1), cj)) = MOVING;
                                         grid(grid_idx(ci, cj)) = EMPTY;
-                                        colorGrid(grid_idx((ci + i32(1)), cj)) = colorGrid(grid_idx(ci, cj));
+                                        colorGrid(grid_idx(ci + i32(1), cj)) = colorGrid(grid_idx(ci, cj));
                                         colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
                                       },
                                       true => ()
                                     );
-                                  };
-                                };
+                                  });
+                                });
                                 pieceX = (pieceX + i32(1));
                               },
                               true => ()
@@ -465,87 +605,170 @@ main :: (fn() -> unit)({
 
                     // ── Turn movement ──
                     cond(
-                      ((turnCounter >= TURNING_SPEED) && IsKeyDown(KEY_UP)) => {
+                      ((turnCounter >= TURNING_SPEED) && unsafe(IsKeyDown(KEY_UP))) => {
                         (checker : bool) = false;
 
                         // Corner checks
-                        cond(((grid(grid_idx((pieceX+i32(3)),pieceY))==MOVING) && ((grid(grid_idx(pieceX,pieceY))!=EMPTY) && (grid(grid_idx(pieceX,pieceY))!=MOVING))) => {checker=true;}, true => ());
-                        cond(((grid(grid_idx((pieceX+i32(3)),(pieceY+i32(3))))==MOVING) && ((grid(grid_idx((pieceX+i32(3)),pieceY))!=EMPTY) && (grid(grid_idx((pieceX+i32(3)),pieceY))!=MOVING))) => {checker=true;}, true => ());
-                        cond(((grid(grid_idx(pieceX,(pieceY+i32(3))))==MOVING) && ((grid(grid_idx((pieceX+i32(3)),(pieceY+i32(3))))!=EMPTY) && (grid(grid_idx((pieceX+i32(3)),(pieceY+i32(3))))!=MOVING))) => {checker=true;}, true => ());
-                        cond(((grid(grid_idx(pieceX,pieceY))==MOVING) && ((grid(grid_idx(pieceX,(pieceY+i32(3))))!=EMPTY) && (grid(grid_idx(pieceX,(pieceY+i32(3))))!=MOVING))) => {checker=true;}, true => ());
+                        cond(
+                          ((grid(grid_idx(pieceX + i32(3), pieceY)) == MOVING) && ((grid(grid_idx(pieceX, pieceY)) != EMPTY) && (grid(grid_idx(pieceX, pieceY)) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+                        cond(
+                          ((grid(grid_idx(pieceX + i32(3), pieceY + i32(3))) == MOVING) && ((grid(grid_idx(pieceX + i32(3), pieceY)) != EMPTY) && (grid(grid_idx(pieceX + i32(3), pieceY)) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+                        cond(
+                          ((grid(grid_idx(pieceX, pieceY + i32(3))) == MOVING) && ((grid(grid_idx(pieceX + i32(3), pieceY + i32(3))) != EMPTY) && (grid(grid_idx(pieceX + i32(3), pieceY + i32(3))) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+                        cond(
+                          ((grid(grid_idx(pieceX, pieceY)) == MOVING) && ((grid(grid_idx(pieceX, pieceY + i32(3))) != EMPTY) && (grid(grid_idx(pieceX, pieceY + i32(3))) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
 
                         // Edge checks
-                        cond(((grid(grid_idx((pieceX+i32(1)),pieceY))==MOVING) && ((grid(grid_idx(pieceX,(pieceY+i32(2))))!=EMPTY) && (grid(grid_idx(pieceX,(pieceY+i32(2))))!=MOVING))) => {checker=true;}, true => ());
-                        cond(((grid(grid_idx((pieceX+i32(3)),(pieceY+i32(1))))==MOVING) && ((grid(grid_idx((pieceX+i32(1)),pieceY))!=EMPTY) && (grid(grid_idx((pieceX+i32(1)),pieceY))!=MOVING))) => {checker=true;}, true => ());
-                        cond(((grid(grid_idx((pieceX+i32(2)),(pieceY+i32(3))))==MOVING) && ((grid(grid_idx((pieceX+i32(3)),(pieceY+i32(1))))!=EMPTY) && (grid(grid_idx((pieceX+i32(3)),(pieceY+i32(1))))!=MOVING))) => {checker=true;}, true => ());
-                        cond(((grid(grid_idx(pieceX,(pieceY+i32(2))))==MOVING) && ((grid(grid_idx((pieceX+i32(2)),(pieceY+i32(3))))!=EMPTY) && (grid(grid_idx((pieceX+i32(2)),(pieceY+i32(3))))!=MOVING))) => {checker=true;}, true => ());
-
-                        cond(((grid(grid_idx((pieceX+i32(2)),pieceY))==MOVING) && ((grid(grid_idx(pieceX,(pieceY+i32(1))))!=EMPTY) && (grid(grid_idx(pieceX,(pieceY+i32(1))))!=MOVING))) => {checker=true;}, true => ());
-                        cond(((grid(grid_idx((pieceX+i32(3)),(pieceY+i32(2))))==MOVING) && ((grid(grid_idx((pieceX+i32(2)),pieceY))!=EMPTY) && (grid(grid_idx((pieceX+i32(2)),pieceY))!=MOVING))) => {checker=true;}, true => ());
-                        cond(((grid(grid_idx((pieceX+i32(1)),(pieceY+i32(3))))==MOVING) && ((grid(grid_idx((pieceX+i32(3)),(pieceY+i32(2))))!=EMPTY) && (grid(grid_idx((pieceX+i32(3)),(pieceY+i32(2))))!=MOVING))) => {checker=true;}, true => ());
-                        cond(((grid(grid_idx(pieceX,(pieceY+i32(1))))==MOVING) && ((grid(grid_idx((pieceX+i32(1)),(pieceY+i32(3))))!=EMPTY) && (grid(grid_idx((pieceX+i32(1)),(pieceY+i32(3))))!=MOVING))) => {checker=true;}, true => ());
-
-                        // Inner ring checks
-                        cond(((grid(grid_idx((pieceX+i32(1)),(pieceY+i32(1))))==MOVING) && ((grid(grid_idx((pieceX+i32(1)),(pieceY+i32(2))))!=EMPTY) && (grid(grid_idx((pieceX+i32(1)),(pieceY+i32(2))))!=MOVING))) => {checker=true;}, true => ());
-                        cond(((grid(grid_idx((pieceX+i32(2)),(pieceY+i32(1))))==MOVING) && ((grid(grid_idx((pieceX+i32(1)),(pieceY+i32(1))))!=EMPTY) && (grid(grid_idx((pieceX+i32(1)),(pieceY+i32(1))))!=MOVING))) => {checker=true;}, true => ());
-                        cond(((grid(grid_idx((pieceX+i32(2)),(pieceY+i32(2))))==MOVING) && ((grid(grid_idx((pieceX+i32(2)),(pieceY+i32(1))))!=EMPTY) && (grid(grid_idx((pieceX+i32(2)),(pieceY+i32(1))))!=MOVING))) => {checker=true;}, true => ());
-                        cond(((grid(grid_idx((pieceX+i32(1)),(pieceY+i32(2))))==MOVING) && ((grid(grid_idx((pieceX+i32(2)),(pieceY+i32(2))))!=EMPTY) && (grid(grid_idx((pieceX+i32(2)),(pieceY+i32(2))))!=MOVING))) => {checker=true;}, true => ());
+                        cond(
+                          ((grid(grid_idx(pieceX + i32(1), pieceY)) == MOVING) && ((grid(grid_idx(pieceX, pieceY + i32(2))) != EMPTY) && (grid(grid_idx(pieceX, pieceY + i32(2))) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+                        cond(
+                          ((grid(grid_idx(pieceX + i32(3), pieceY + i32(1))) == MOVING) && ((grid(grid_idx(pieceX + i32(1), pieceY)) != EMPTY) && (grid(grid_idx(pieceX + i32(1), pieceY)) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+                        cond(
+                          ((grid(grid_idx(pieceX + i32(2), pieceY + i32(3))) == MOVING) && ((grid(grid_idx(pieceX + i32(3), pieceY + i32(1))) != EMPTY) && (grid(grid_idx(pieceX + i32(3), pieceY + i32(1))) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+                        cond(
+                          ((grid(grid_idx(pieceX, pieceY + i32(2))) == MOVING) && ((grid(grid_idx(pieceX + i32(2), pieceY + i32(3))) != EMPTY) && (grid(grid_idx(pieceX + i32(2), pieceY + i32(3))) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
 
                         cond(
-                          !(checker) => {
+                          ((grid(grid_idx(pieceX + i32(2), pieceY)) == MOVING) && ((grid(grid_idx(pieceX, pieceY + i32(1))) != EMPTY) && (grid(grid_idx(pieceX, pieceY + i32(1))) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+                        cond(
+                          ((grid(grid_idx(pieceX + i32(3), pieceY + i32(2))) == MOVING) && ((grid(grid_idx(pieceX + i32(2), pieceY)) != EMPTY) && (grid(grid_idx(pieceX + i32(2), pieceY)) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+                        cond(
+                          ((grid(grid_idx(pieceX + i32(1), pieceY + i32(3))) == MOVING) && ((grid(grid_idx(pieceX + i32(3), pieceY + i32(2))) != EMPTY) && (grid(grid_idx(pieceX + i32(3), pieceY + i32(2))) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+                        cond(
+                          ((grid(grid_idx(pieceX, pieceY + i32(1))) == MOVING) && ((grid(grid_idx(pieceX + i32(1), pieceY + i32(3))) != EMPTY) && (grid(grid_idx(pieceX + i32(1), pieceY + i32(3))) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+
+                        // Inner ring checks
+                        cond(
+                          ((grid(grid_idx(pieceX + i32(1), pieceY + i32(1))) == MOVING) && ((grid(grid_idx(pieceX + i32(1), pieceY + i32(2))) != EMPTY) && (grid(grid_idx(pieceX + i32(1), pieceY + i32(2))) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+                        cond(
+                          ((grid(grid_idx(pieceX + i32(2), pieceY + i32(1))) == MOVING) && ((grid(grid_idx(pieceX + i32(1), pieceY + i32(1))) != EMPTY) && (grid(grid_idx(pieceX + i32(1), pieceY + i32(1))) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+                        cond(
+                          ((grid(grid_idx(pieceX + i32(2), pieceY + i32(2))) == MOVING) && ((grid(grid_idx(pieceX + i32(2), pieceY + i32(1))) != EMPTY) && (grid(grid_idx(pieceX + i32(2), pieceY + i32(1))) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+                        cond(
+                          ((grid(grid_idx(pieceX + i32(1), pieceY + i32(2))) == MOVING) && ((grid(grid_idx(pieceX + i32(2), pieceY + i32(2))) != EMPTY) && (grid(grid_idx(pieceX + i32(2), pieceY + i32(2))) != MOVING))) => {
+                            checker = true;
+                          },
+                          true => ()
+                        );
+
+                        cond(
+                          !checker => {
                             // Rotate piece matrix (cyclic corner swap)
-                            (aux : i32) = piece(piece_idx(i32(0),i32(0)));
-                            piece(piece_idx(i32(0),i32(0))) = piece(piece_idx(i32(3),i32(0)));
-                            piece(piece_idx(i32(3),i32(0))) = piece(piece_idx(i32(3),i32(3)));
-                            piece(piece_idx(i32(3),i32(3))) = piece(piece_idx(i32(0),i32(3)));
-                            piece(piece_idx(i32(0),i32(3))) = aux;
+                            (aux : i32) = piece(piece_idx(i32(0), i32(0)));
+                            piece(piece_idx(i32(0), i32(0))) = piece(piece_idx(i32(3), i32(0)));
+                            piece(piece_idx(i32(3), i32(0))) = piece(piece_idx(i32(3), i32(3)));
+                            piece(piece_idx(i32(3), i32(3))) = piece(piece_idx(i32(0), i32(3)));
+                            piece(piece_idx(i32(0), i32(3))) = aux;
 
-                            aux = piece(piece_idx(i32(1),i32(0)));
-                            piece(piece_idx(i32(1),i32(0))) = piece(piece_idx(i32(3),i32(1)));
-                            piece(piece_idx(i32(3),i32(1))) = piece(piece_idx(i32(2),i32(3)));
-                            piece(piece_idx(i32(2),i32(3))) = piece(piece_idx(i32(0),i32(2)));
-                            piece(piece_idx(i32(0),i32(2))) = aux;
+                            aux = piece(piece_idx(i32(1), i32(0)));
+                            piece(piece_idx(i32(1), i32(0))) = piece(piece_idx(i32(3), i32(1)));
+                            piece(piece_idx(i32(3), i32(1))) = piece(piece_idx(i32(2), i32(3)));
+                            piece(piece_idx(i32(2), i32(3))) = piece(piece_idx(i32(0), i32(2)));
+                            piece(piece_idx(i32(0), i32(2))) = aux;
 
-                            aux = piece(piece_idx(i32(2),i32(0)));
-                            piece(piece_idx(i32(2),i32(0))) = piece(piece_idx(i32(3),i32(2)));
-                            piece(piece_idx(i32(3),i32(2))) = piece(piece_idx(i32(1),i32(3)));
-                            piece(piece_idx(i32(1),i32(3))) = piece(piece_idx(i32(0),i32(1)));
-                            piece(piece_idx(i32(0),i32(1))) = aux;
+                            aux = piece(piece_idx(i32(2), i32(0)));
+                            piece(piece_idx(i32(2), i32(0))) = piece(piece_idx(i32(3), i32(2)));
+                            piece(piece_idx(i32(3), i32(2))) = piece(piece_idx(i32(1), i32(3)));
+                            piece(piece_idx(i32(1), i32(3))) = piece(piece_idx(i32(0), i32(1)));
+                            piece(piece_idx(i32(0), i32(1))) = aux;
 
                             // Inner ring
-                            aux = piece(piece_idx(i32(1),i32(1)));
-                            piece(piece_idx(i32(1),i32(1))) = piece(piece_idx(i32(2),i32(1)));
-                            piece(piece_idx(i32(2),i32(1))) = piece(piece_idx(i32(2),i32(2)));
-                            piece(piece_idx(i32(2),i32(2))) = piece(piece_idx(i32(1),i32(2)));
-                            piece(piece_idx(i32(1),i32(2))) = aux;
+                            aux = piece(piece_idx(i32(1), i32(1)));
+                            piece(piece_idx(i32(1), i32(1))) = piece(piece_idx(i32(2), i32(1)));
+                            piece(piece_idx(i32(2), i32(1))) = piece(piece_idx(i32(2), i32(2)));
+                            piece(piece_idx(i32(2), i32(2))) = piece(piece_idx(i32(1), i32(2)));
+                            piece(piece_idx(i32(1), i32(2))) = aux;
                           },
                           true => ()
                         );
 
                         // Clear MOVING from grid and re-place rotated piece
                         cj = (GRID_V - i32(2));
-                        while (cj >= i32(0)), cj = (cj - i32(1)), {
+                        while(cj >= i32(0), cj = (cj - i32(1)), {
                           ci = i32(1);
-                          while (ci < (GRID_H - i32(1))), ci = (ci + i32(1)), {
-                            cond((grid(grid_idx(ci, cj)) == MOVING) => {
-                              grid(grid_idx(ci, cj)) = EMPTY;
-                              colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
-                            }, true => ());
-                          };
-                        };
-                        ci = pieceX;
-                        while (ci < (pieceX + i32(4))), ci = (ci + i32(1)), {
-                          cj = pieceY;
-                          while (cj < (pieceY + i32(4))), cj = (cj + i32(1)), {
+                          while(ci < (GRID_H - i32(1)), ci = (ci + i32(1)), {
                             cond(
-                              (piece(piece_idx((ci - pieceX), (cj - pieceY))) == MOVING) => {
+                              (grid(grid_idx(ci, cj)) == MOVING) => {
+                                grid(grid_idx(ci, cj)) = EMPTY;
+                                colorGrid(grid_idx(ci, cj)) = PIECE_NONE;
+                              },
+                              true => ()
+                            );
+                          });
+                        });
+                        ci = pieceX;
+                        while(ci < (pieceX + i32(4)), ci = (ci + i32(1)), {
+                          cj = pieceY;
+                          while(cj < (pieceY + i32(4)), cj = (cj + i32(1)), {
+                            cond(
+                              (piece(piece_idx(ci - pieceX, cj - pieceY)) == MOVING) => {
                                 grid(grid_idx(ci, cj)) = MOVING;
                                 colorGrid(grid_idx(ci, cj)) = currentPieceType;
                               },
                               true => ()
                             );
-                          };
-                        };
+                          });
+                        });
                         turnCounter = i32(0);
                       },
                       true => ()
@@ -555,12 +778,17 @@ main :: (fn() -> unit)({
 
                 // Game over check: any FULL cell in top 2 rows
                 cj = i32(0);
-                while (cj < i32(2)), cj = (cj + i32(1)), {
+                while(cj < i32(2), cj = (cj + i32(1)), {
                   ci = i32(1);
-                  while (ci < (GRID_H - i32(1))), ci = (ci + i32(1)), {
-                    cond((grid(grid_idx(ci, cj)) == FULL) => { gameOver = true; }, true => ());
-                  };
-                };
+                  while(ci < (GRID_H - i32(1)), ci = (ci + i32(1)), {
+                    cond(
+                      (grid(grid_idx(ci, cj)) == FULL) => {
+                        gameOver = true;
+                      },
+                      true => ()
+                    );
+                  });
+                });
               }
             );
           }
@@ -569,51 +797,51 @@ main :: (fn() -> unit)({
     );
 
     // ────────────────── DRAW ──────────────────
-    BeginDrawing();
-    ClearBackground(RAYWHITE);
+    unsafe(BeginDrawing());
+    unsafe(ClearBackground(RAYWHITE));
 
     cond(
-      !(gameOver) => {
+      !gameOver => {
         // Calculate grid offset to center it
-        (offsetX : i32) = (((SCREEN_W / i32(2)) - ((GRID_H * SQUARE_SIZE) / i32(2))) - i32(50));
+        (offsetX : i32) = ((SCREEN_W / i32(2)) - ((GRID_H * SQUARE_SIZE) / i32(2)) - i32(50));
         (offsetY : i32) = ((((SCREEN_H / i32(2)) - (((GRID_V - i32(1)) * SQUARE_SIZE) / i32(2))) + (SQUARE_SIZE * i32(2))) - i32(50));
-        (startX  : i32) = offsetX;
+        (startX : i32) = offsetX;
 
         // Draw grid
         cj = i32(0);
-        while (cj < GRID_V), cj = (cj + i32(1)), {
+        while(cj < GRID_V, cj = (cj + i32(1)), {
           ci = i32(0);
-          while (ci < GRID_H), ci = (ci + i32(1)), {
+          while(ci < GRID_H, ci = (ci + i32(1)), {
             (cell : i32) = grid(grid_idx(ci, cj));
             (pt : i32) = colorGrid(grid_idx(ci, cj));
             cond(
               (cell == EMPTY) => {
-                DrawLine(offsetX, offsetY, (offsetX + SQUARE_SIZE), offsetY, LIGHTGRAY);
-                DrawLine(offsetX, offsetY, offsetX, (offsetY + SQUARE_SIZE), LIGHTGRAY);
-                DrawLine((offsetX + SQUARE_SIZE), offsetY, (offsetX + SQUARE_SIZE), (offsetY + SQUARE_SIZE), LIGHTGRAY);
-                DrawLine(offsetX, (offsetY + SQUARE_SIZE), (offsetX + SQUARE_SIZE), (offsetY + SQUARE_SIZE), LIGHTGRAY);
+                unsafe(DrawLine(offsetX, offsetY, offsetX + SQUARE_SIZE, offsetY, LIGHTGRAY));
+                unsafe(DrawLine(offsetX, offsetY, offsetX, offsetY + SQUARE_SIZE, LIGHTGRAY));
+                unsafe(DrawLine(offsetX + SQUARE_SIZE, offsetY, offsetX + SQUARE_SIZE, offsetY + SQUARE_SIZE, LIGHTGRAY));
+                unsafe(DrawLine(offsetX, offsetY + SQUARE_SIZE, offsetX + SQUARE_SIZE, offsetY + SQUARE_SIZE, LIGHTGRAY));
               },
               (cell == FULL) => {
-                DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color(pt));
-                DrawRectangleLines(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color_dark(pt));
+                unsafe(DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color(pt)));
+                unsafe(DrawRectangleLines(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color_dark(pt)));
               },
               (cell == MOVING) => {
-                DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color(pt));
-                DrawRectangleLines(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color_dark(pt));
+                unsafe(DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color(pt)));
+                unsafe(DrawRectangleLines(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color_dark(pt)));
               },
               (cell == BLOCK) => {
-                DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, LIGHTGRAY);
+                unsafe(DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, LIGHTGRAY));
               },
               (cell == FADING) => {
-                DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, fadingColor);
+                unsafe(DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, fadingColor));
               },
               true => ()
             );
             offsetX = (offsetX + SQUARE_SIZE);
-          };
+          });
           offsetX = startX;
           offsetY = (offsetY + SQUARE_SIZE);
-        };
+        });
 
         // Draw incoming piece preview
         offsetX = i32(700);
@@ -621,49 +849,55 @@ main :: (fn() -> unit)({
         (previewX : i32) = offsetX;
 
         cj = i32(0);
-        while (cj < i32(4)), cj = (cj + i32(1)), {
+        while(cj < i32(4), cj = (cj + i32(1)), {
           ci = i32(0);
-          while (ci < i32(4)), ci = (ci + i32(1)), {
+          while(ci < i32(4), ci = (ci + i32(1)), {
             cond(
               (incoming(piece_idx(ci, cj)) == EMPTY) => {
-                DrawLine(offsetX, offsetY, (offsetX + SQUARE_SIZE), offsetY, LIGHTGRAY);
-                DrawLine(offsetX, offsetY, offsetX, (offsetY + SQUARE_SIZE), LIGHTGRAY);
-                DrawLine((offsetX + SQUARE_SIZE), offsetY, (offsetX + SQUARE_SIZE), (offsetY + SQUARE_SIZE), LIGHTGRAY);
-                DrawLine(offsetX, (offsetY + SQUARE_SIZE), (offsetX + SQUARE_SIZE), (offsetY + SQUARE_SIZE), LIGHTGRAY);
+                unsafe(DrawLine(offsetX, offsetY, offsetX + SQUARE_SIZE, offsetY, LIGHTGRAY));
+                unsafe(DrawLine(offsetX, offsetY, offsetX, offsetY + SQUARE_SIZE, LIGHTGRAY));
+                unsafe(DrawLine(offsetX + SQUARE_SIZE, offsetY, offsetX + SQUARE_SIZE, offsetY + SQUARE_SIZE, LIGHTGRAY));
+                unsafe(DrawLine(offsetX, offsetY + SQUARE_SIZE, offsetX + SQUARE_SIZE, offsetY + SQUARE_SIZE, LIGHTGRAY));
               },
               (incoming(piece_idx(ci, cj)) == MOVING) => {
-                DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color(incomingPieceType));
-                DrawRectangleLines(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color_dark(incomingPieceType));
+                unsafe(DrawRectangle(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color(incomingPieceType)));
+                unsafe(DrawRectangleLines(offsetX, offsetY, SQUARE_SIZE, SQUARE_SIZE, piece_color_dark(incomingPieceType)));
               },
               true => ()
             );
             offsetX = (offsetX + SQUARE_SIZE);
-          };
+          });
           offsetX = previewX;
           offsetY = (offsetY + SQUARE_SIZE);
-        };
+        });
 
-        DrawText("INCOMING:", i32(700), i32(55), i32(15), GRAY);
-        DrawText(TextFormat("LINES:      %04i", lines), i32(700), i32(230), i32(15), GRAY);
+        unsafe(DrawText("INCOMING:", i32(700), i32(55), i32(15), GRAY));
+        unsafe(DrawText(TextFormat("LINES:      %04i", lines), i32(700), i32(230), i32(15), GRAY));
 
         cond(
           pause => {
-            DrawText("GAME PAUSED", ((SCREEN_W / i32(2)) - (MeasureText("GAME PAUSED", i32(40)) / i32(2))), ((SCREEN_H / i32(2)) - i32(40)), i32(40), GRAY);
+            unsafe(DrawText("GAME PAUSED", (SCREEN_W / i32(2)) - (MeasureText("GAME PAUSED", i32(40)) / i32(2)), (SCREEN_H / i32(2)) - i32(40), i32(40), GRAY));
           },
           true => ()
         );
       },
       true => {
-        DrawText("PRESS [ENTER] TO PLAY AGAIN",
-          ((SCREEN_W / i32(2)) - (MeasureText("PRESS [ENTER] TO PLAY AGAIN", i32(20)) / i32(2))),
-          ((SCREEN_H / i32(2)) - i32(50)), i32(20), GRAY);
+        unsafe(
+          DrawText(
+            "PRESS [ENTER] TO PLAY AGAIN",
+            (SCREEN_W / i32(2)) - (MeasureText("PRESS [ENTER] TO PLAY AGAIN", i32(20)) / i32(2)),
+            (SCREEN_H / i32(2)) - i32(50),
+            i32(20),
+            GRAY
+          )
+        );
       }
     );
 
-    EndDrawing();
-  };
+    unsafe(EndDrawing());
+  });
 
-  CloseWindow();
+  unsafe(CloseWindow());
 });
 
-export main;
+export(main);

@@ -43,7 +43,7 @@ direnv allow .  # One-time setup
 ### Build & Run (Native)
 
 ```bash
-yo fetch                # Fetch raylib_yo dependency from GitHub
+yo install              # Fetch the raylib_yo dependency declared in yo.toml
 yo build install_native # Build only the native executable
 yo build run            # Build and run the game
 ```
@@ -97,10 +97,10 @@ yo build install_wasm           # Build only the WASM target
 yo build                        # Build both native and WASM targets
 ```
 
-The WASM output will be at `yo-out/wasm32-emscripten/bin/`. Serve it with a local HTTP server:
+The WASM output will be at `yo-out/wasm32-unknown-emscripten/bin/`. Serve it with a local HTTP server:
 
 ```bash
-cd yo-out/wasm32-emscripten/bin
+cd yo-out/wasm32-unknown-emscripten/bin
 python -m http.server 8080
 # Open http://localhost:8080/tetris_yo_wasm.html
 ```
@@ -120,14 +120,14 @@ python -m http.server 8080
 tetris_yo/
 ├── .github/workflows/    # CI/CD — builds WASM and deploys to GitHub Pages
 ├── build.yo              # Build configuration (native + WASM targets)
-├── deps.yo               # Dependencies (managed by `yo install`)
-├── yo.lock               # Dependency lock file
+├── yo.toml               # Package manifest — [package] and [dependencies]
+├── yo.lock               # Resolved dependency graph; commit it
 ├── src/
 │   ├── lib.yo            # Library root (empty)
 │   └── main.yo           # Game implementation (~600 lines)
 ├── yo-out/
 │   ├── x86_64-windows-msvc/bin/   # Native build output
-│   └── wasm32-emscripten/bin/     # WASM build output (.html + .js + .wasm)
+│   └── wasm32-unknown-emscripten/bin/  # WASM build output (.html + .js + .wasm)
 └── devenv.nix            # Development environment
 ```
 
@@ -142,7 +142,7 @@ The game is a faithful port of the [classic raylib Tetris example](https://githu
 
 ## Dependencies
 
-- [raylib_yo](https://github.com/shd101wyy/raylib_yo) — Raylib bindings for Yo (git dependency)
+- [raylib_yo](https://github.com/shd101wyy/raylib_yo) — raylib bindings for Yo, declared in `yo.toml` and resolved by `yo add` / `yo install` (it used to be cloned into `vendor/` by CI)
 - [raylib](https://www.raylib.com/) — Graphics library (system library via pkg-config)
 
 ## License
