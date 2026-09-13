@@ -25,7 +25,14 @@ exe_wasm :: build.executable({
 exe.link(raylib);
 
 // Emscripten-specific flags: GLFW support and ASYNCIFY for the game loop
-exe_wasm.add_c_flags("-sUSE_GLFW=3 -sASYNCIFY -DPLATFORM_WEB");
+// `-lraylib` is explicit for the WASM target. Native gets raylib through
+// `exe.link(raylib)` / pkg-config, but for wasm32-emscripten raylib is not a
+// pkg-config package at all: the workflow builds it from source and copies
+// `libraylib.a` into the Emscripten sysroot, which is already on emcc's -L
+// path. Before the v0.2.32 migration this came transitively from
+// `add_import_list(imports)`, which is gone; without it wasm-ld fails with
+// `undefined symbol: DrawLine`.
+exe_wasm.add_c_flags("-sUSE_GLFW=3 -sASYNCIFY -DPLATFORM_WEB -lraylib");
 
 install_native :: build.step("install_native", "Build native executable");
 install_native.depend_on(exe);
