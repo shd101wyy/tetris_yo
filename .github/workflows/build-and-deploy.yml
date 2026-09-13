@@ -20,12 +20,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
+      # Yo is installed from GITHUB RELEASES, not npm. npm publishing stopped at
+      # v0.2.0, so `npm install -g @shd101wyy/yo` pulls a v0.2.0-era compiler;
+      # it then honours `.yo-version` by trying to DISPATCH to the pinned
+      # release through npm and dies with
+      #   Error dispatching to Yo v0.2.32: HTTP 404 fetching
+      #   https://registry.npmjs.org/%40shd101wyy%2Fyo/0.2.32
+      # The version is pinned to match `.yo-version`, so the installed compiler
+      # IS the one the project asks for and no dispatch happens at all.
       - name: Install Yo compiler
-        run: npm install -g @shd101wyy/yo
+        run: |
+          curl -sSL https://shd101wyy.github.io/Yo/install.sh | sh -s -- --version "$(cat .yo-version)"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Show Yo version
+        run: yo --version
 
       - name: Install system dependencies
         run: |
