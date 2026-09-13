@@ -1,0 +1,8 @@
+[package]
+name = "tetris_yo"
+version = "0.1.0"
+description = "Tetris written in Yo, rendered with raylib"
+license = "MIT"
+
+[dependencies]
+raylib_yo = { git = "https://github.com/shd101wyy/raylib_yo", version = "^0.0.7" }

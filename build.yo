@@ -1,21 +1,28 @@
-build :: import "std/build";
-{ imports } :: import "./deps.yo";
+build :: import("std/build");
+
+// raylib is a SYSTEM library (pkg-config). The Yo package `raylib_yo` is a
+// DEPENDENCY, declared in yo.toml and imported by name from src/main.yo —
+// it is no longer cloned into ./vendor by CI.
+raylib :: build.system_library({
+  name : "raylib",
+  defines : "NOMINMAX NOGDI NOUSER"
+});
 
 exe :: build.executable({
-  name: "tetris_yo",
-  root: "./src/main.yo",
-  optimize: build.Optimize.ReleaseFast
+  name : "tetris_yo",
+  root : "./src/main.yo",
+  optimize : build.Optimize.ReleaseFast
 });
 exe_wasm :: build.executable({
-  name: "tetris_yo_wasm",
-  root: "./src/main.yo",
-  optimize: build.Optimize.ReleaseFast,
-  target: build.CompilationTarget.Wasm32_Emscripten
+  name : "tetris_yo_wasm",
+  root : "./src/main.yo",
+  optimize : build.Optimize.ReleaseFast,
+  target : build.CompilationTarget.Wasm32_Unknown_Emscripten
 });
 
-// Import the raylib_yo module — system libraries (raylib) are transitively propagated
-exe.add_import_list(imports);
-exe_wasm.add_import_list(imports);
+// Native links the system raylib; the WASM target picks raylib up from the
+// Emscripten sysroot instead (see the workflow).
+exe.link(raylib);
 
 // Emscripten-specific flags: GLFW support and ASYNCIFY for the game loop
 exe_wasm.add_c_flags("-sUSE_GLFW=3 -sASYNCIFY -DPLATFORM_WEB");
